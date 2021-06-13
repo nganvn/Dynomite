@@ -1,9 +1,6 @@
 import { EggColor } from '../const';
-export interface IEgg {
+export interface IGun {
   scene: Phaser.Scene;
   x?: number;
   y?: number;
-  color: EggColor;
-  texture?: string;
-  frame?: string | number;
 }

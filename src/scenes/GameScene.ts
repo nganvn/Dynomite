@@ -22,33 +22,66 @@ export class GameScene extends Phaser.Scene {
 
   create(): void {
     this.gameMap = new GameMap(this);
-    // this.gun = new Gun(this, this.cameras.main.width / 2, this.cameras.main.height - 68);
     
-    // this.gameFrame = this.add.rectangle(this.cameras.main.width / 2, this.cameras.main.height / 2 - 50, 64*8, 700)
-    //   .setStrokeStyle(2, 0x000000);
-    
-    // this.gameBoune = new Phaser.Geom.Rectangle(50, -500, 64*8, 2000);
+    this.gun = new Gun({
+      scene:this, 
+      x: this.cameras.main.width / 2, 
+      y: this.cameras.main.height - 68
+    });
 
-    // // input
-    // this.gameFrame.setInteractive()
-    //   .on(Phaser.Input.Events.POINTER_DOWN, () => {
-    //     let bullet = this.gun.shot();
-    //     bullet.body.setBoundsRectangle(this.gameBoune);
-    //     let overlap = this.physics.add.overlap(bullet, this.gameMap, (bullet: Bullet, egg: Egg) => {
-  
-    //       // let angle = Phaser.Math.Angle.Between(bullet.x, bullet.y, egg.x, egg.y);
-    //       // if (bullet.active && angle < - Math.PI / 3 + 0.5  && angle > - 2 * Math.PI / 3 - 0.5) {
-    //       //   bullet.setVelocity(0,0);
-    //       //   bullet.setActive(false);
-    //       //   this.gameMap.addEgg(bullet, egg, angle);
-    //       //   this.physics.world.removeCollider(overlap);
-    //       //   bullet.destroy();
-    //       // }
-    //     });
-    //   })
-    //   .on(Phaser.Input.Events.POINTER_MOVE, (event: any) => {
-    //     this.gun.updateTrajectory(event.x, event.y);
-    //   })
+    let bullet = new Bullet({
+      scene: this,
+      color: this.gameMap.randEggColor(), 
+      x: this.cameras.main.width / 2, 
+      y: this.cameras.main.height - 68
+    });
+
+    this.gun.loadBullet(bullet);
+    
+    this.gameFrame = this.add.rectangle(this.cameras.main.width / 2, this.cameras.main.height / 2 - 50, 64*8, 700)
+      .setStrokeStyle(2, 0x000000);
+    
+    this.gameBoune = new Phaser.Geom.Rectangle(50, -500, 64*8, 2000);
+
+    // input
+    this.gameFrame.setInteractive()
+      .on(Phaser.Input.Events.POINTER_DOWN, () => {
+        let bullet = this.gun.shot();
+        bullet.body.setBoundsRectangle(this.gameBoune);
+        
+        let overlap = this.physics.add.collider(bullet, this.gameMap.getEggGroup(), (bullet: Bullet, egg: Egg) => {
+          let angle = Phaser.Math.Angle.Between(bullet.x, bullet.y, egg.x + egg.parentContainer.x, egg.y + egg.parentContainer.y);
+
+          if (bullet.active && Math.abs(angle + Math.PI/2) < Math.PI / 3) {
+            bullet.setVelocity(0,0);
+            this.gameMap.addEgg(bullet, egg, angle + Math.PI/2 >= 0);
+            
+            bullet.setActive(false);
+            bullet.destroy();
+            this.physics.world.removeCollider(overlap);
+          }
+        });
+
+        let overlapTopLine = this.physics.add.overlap(bullet, this.gameMap.getTopLine(), (bullet: Bullet, topLine) => {
+          
+          this.gameMap.addEggAtTopLane(bullet);
+          this.physics.world.removeCollider(overlapTopLine);
+          bullet.destroy();
+        })
+
+        let newBullet = new Bullet({
+          scene: this,
+          color: this.gameMap.randEggColor(), 
+          x: this.cameras.main.width / 2, 
+          y: this.cameras.main.height - 68
+        });
+    
+        this.gun.loadBullet(newBullet);
+        
+      })
+      .on(Phaser.Input.Events.POINTER_MOVE, (event: any) => {
+        this.gun.updateTrajectory(event.x, event.y);
+      })
   }
   update(): void {
 

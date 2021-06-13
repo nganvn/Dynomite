@@ -1,16 +1,18 @@
 import { Physics, Scene } from "phaser";
 import { EggColor, getEggStringColor, randEggColor } from '../const';
 import { Egg } from "./Egg";
+import { IEgg } from '../interfaces/Egg.interface';
 
 export class Bullet extends Egg {
 
-  constructor(scene: Scene, color: EggColor, x?: number, y?: number, texture?: string, frame?: string) {
-    super(scene, x, y, color, texture, frame);
+  constructor(params: IEgg) {
+    super(params);
     
     this.setBounce(1,1)
       .setCollideWorldBounds(true)
       .setDepth(10);
-    scene.add.existing(this);
+      
+    this.scene.add.existing(this);
   }
 
   public update(): void {

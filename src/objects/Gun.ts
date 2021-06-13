@@ -1,4 +1,6 @@
 import { GameObjects, Scale, Scene, Physics } from 'phaser';
+import { EggColor } from '../const';
+import { IGun } from '../interfaces/Gun.interface';
 import { Bullet } from './Bullet';
 import { Egg } from './Egg';
 import { Trajectory } from './Trajectory';
@@ -6,9 +8,10 @@ import { Trajectory } from './Trajectory';
 export class Gun extends GameObjects.Container {
   private bullet: Bullet;
   private trajectory: Trajectory;
+  private currentColors: EggColor[];
 
-  constructor(scene: Scene, x?: number, y?: number) {
-    super(scene, x, y);
+  constructor(params: IGun) {
+    super(params.scene, params.x, params.y);
 
     this.init();
 
@@ -21,11 +24,10 @@ export class Gun extends GameObjects.Container {
   private init() {
     this.trajectory = new Trajectory(this.scene);
     this.add(this.trajectory);
-    this.loadEgg();
   }
 
-  public loadEgg(): void {
-    this.bullet = new Bullet(this.scene, this.scene.cameras.main.width / 2, this.scene.cameras.main.height - 68);
+  public loadBullet(bullet: Bullet): void {
+    this.bullet = bullet;
     
   }
 
@@ -38,6 +40,9 @@ export class Gun extends GameObjects.Container {
   }
 
   public shot(): Bullet {
+    if (!this.bullet) {
+      return null;
+    }
     let angle = this.trajectory.rotation;
     let speed = this.scene.registry.get('speed');
     
@@ -46,7 +51,7 @@ export class Gun extends GameObjects.Container {
 
     this.bullet.setVelocity(vx, vy);
     let bulletRet = this.bullet;
-    this.loadEgg();
+    this.bullet = null;
     return bulletRet;
   }
 

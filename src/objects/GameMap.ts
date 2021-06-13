@@ -3,13 +3,14 @@ import { Egg } from './Egg';
 import { Bullet } from './Bullet';
 import { EggColor, randEggColor } from '../const';
 export class GameMap extends GameObjects.Container {
+  private topLine: GameObjects.Line;
   private eggsGroup: GameObjects.Group;
   private eggsMap: Array<Array<Egg>>;
   private check: boolean[][];
 
   private isFirstRowOnLeft: boolean;
   private size: number;
-  private currentColor: EggColor[];
+  private currentColors: EggColor[];
   
 
   constructor(scene: Scene) {
@@ -24,18 +25,38 @@ export class GameMap extends GameObjects.Container {
     this.width = this.size*64;
     this.eggsGroup = this.scene.add.group();
     this.eggsMap = new Array<Array<Egg>>();
-    this.currentColor = [EggColor.Egg0, EggColor.Egg1, EggColor.Egg2];
+    this.currentColors = [EggColor.Egg0, EggColor.Egg1, EggColor.Egg2];
+
+    this.setX((this.scene.cameras.main.width - this.width) / 2);
 
     this.addRow();
     this.addRow();
-    this.addRow();
-    this.addRow();
-    this.addRow();
-    this.addRow();
-    
+    // this.addRow();
+    // this.addRow();
+    // this.addRow();
+    // this.addRow();
+    this.topLine = this.scene.add.line(0, 0, 0, 0, this.width, 0, 0xff0000, 1).setOrigin(0);
+    this.scene.physics.world.enable(this.topLine);
+    this.add(this.topLine);
     this.scene.add.existing(this);
+    this.setY(10);
   }
 
+  public getCurrentColors(): EggColor[] {
+    return this.currentColors;
+  }
+  
+  public getEggGroup(): GameObjects.Group {
+    return this.eggsGroup;
+  }
+
+  public getTopLine(): GameObjects.Line {
+    return this.topLine;
+  }
+
+  public randEggColor(): EggColor {
+      return this.currentColors[Phaser.Math.Between(0, this.currentColors.length - 1)];
+  }
 
   private addRow(): void {
     this.isFirstRowOnLeft = !this.isFirstRowOnLeft;
@@ -53,13 +74,21 @@ export class GameMap extends GameObjects.Container {
 
     let offsetX = isFirstRowOnLeft ? 32 : 64;
     let eggs = Array(Math.floor(size - 1)).fill(null).map((ele, index) => {
-      let randEggColor = this.currentColor[Phaser.Math.Between(0, this.currentColor.length - 1)];
-      return new Egg(this.scene, randEggColor, offsetX + index*64, 32);
+      return new Egg({
+        scene: this.scene,
+        color: this.randEggColor(), 
+        x: offsetX + index*64, 
+        y: 32
+      });
     });
 
     if (! (Math.floor(size) == size && !isFirstRowOnLeft)) {
-      let randEggColor = this.currentColor[Phaser.Math.Between(0, this.currentColor.length - 1)];
-      eggs.push(new Egg(this.scene, randEggColor, offsetX + eggs.length*64, 32))
+      eggs.push(new Egg({
+        scene: this.scene,
+        color: this.randEggColor(), 
+        x: offsetX + eggs.length*64, 
+        y: 32
+      }));
     };
 
     return eggs;
@@ -104,13 +133,15 @@ export class GameMap extends GameObjects.Container {
 
   private findAllEggsNotRelatedWithRoot(): [number, number][] {
     var visited = Array(this.eggsMap.length).fill(null).map(() => Array(Math.floor(this.size)).fill(false));
-    let col = this.eggsMap.findIndex((ele) => {
-      return ele != null;
+    this.eggsMap[0].forEach((ele, col) => {
+      if (ele != null) {
+        visited[0][col] = true;
+        
+        this.recurVisitAllEggsRelatedWithRoot(0, col, visited);
+      }
     });
 
-    visited[0][col] = true;
 
-    this.recurVisitAllEggsRelatedWithRoot(0, col, visited);
 
     let result: [number, number][] = [];
 
@@ -145,67 +176,115 @@ export class GameMap extends GameObjects.Container {
   }
 
 
-  public addEgg(bullet: Bullet, egg: Egg, angle: number) {
-    let col = -1;
+  public addEggAtTopLane(bullet: Bullet): void {
+    let x = bullet.x - this.x;
+    
+    let col = (x + (this.isFirstRowOnLeft ? 0 : 32)) /64 - 1;
+
+    let offsetX = this.isFirstRowOnLeft ? 32 : 64;
+
+    let newEgg = new Egg({
+      scene: this.scene,
+      color: bullet.getColor(), 
+      x: offsetX + Math.round(col)*64,
+      y: 32
+    });
+
+    console.log(col);
+
+    this.add(newEgg);
+    this.eggsGroup.add(newEgg);
+    this.eggsMap[0][Math.round(col)] = newEgg;
+
+    this.scene.time.addEvent({
+      delay: 100, callback: () => {
+        this.checkEggsChain(0, Math.round(col))
+      }
+    });
+  }
+
+  public addEgg(bullet: Bullet, egg: Egg, isLeft: boolean): void {
+    console.log(this.eggsMap);
+    let col = -2;
     let row = this.eggsMap.findIndex((row, rowIdx) => {
       col = row.findIndex((cell, colIdx) => {
         return cell === egg;
       });
       return col >= 0;
     });
-    
-    if (this.eggsMap.length - 1 == row) {
-      let newRow = new Array<Egg>(7);
-      // let evenPos = this.isFirstRowLeft ? 32 : 64;
-      // let oddPos = this.isFirstRowLeft ? 64 : 32;
-      // let newRow = new Array<Egg>(7);
 
-      // newRow[idx] = new Egg(this.scene, evenPos + idx*64 + 44, (row + 1)*hOffset + 50);
-      // newRow[idx].setColor(bullet.getColor());
-
-      // this.add(newRow[idx]);
-      this.eggsMap.push(newRow);
-    }
-    row = row + 1;
-    if (row % 2 == 0) {
-      col += +(angle <= - Math.PI / 2)
-    } else {
-      col -= +(angle > - Math.PI / 2)
-    }
-
-    if (this.eggsMap[row][col]) {
-      if (angle <= - Math.PI / 2) {
-        col += 1;
-      } else {
+    console.log(row, isLeft);
+    if (this.isLeftRow(row)) {
+      if (isLeft) {
         col -= 1;
       }
-    }
-    if (col > 7 - row % 2) {
-      col = 7 - row % 2;
+    } else {
+      if (!isLeft) {
+        col += 1;
+      }
     }
 
-    let evenPos = this.isFirstRowOnLeft ? 32 : 64;
-    let oddPos = this.isFirstRowOnLeft ? 64 : 32;
+    if (col + 1 + (this.isLeftRow(row) ? 0.5 : 0) > this.size) {
+      col -= 1;
+    }
+
+    if (this.eggsMap.length - 1 == row) {
+      let newRow = new Array<Egg>(Math.floor(this.size));
+      
+
+      this.eggsMap.push(newRow);
+    }
+    
+    row += 1;
+
+    if (this.eggsMap[row][col]) {
+      if (isLeft) {
+        col -= 1;
+      } else {
+        col += 1;
+      }
+    }
+
     let hOffset = Math.sin(Math.PI / 3) * 64;
+    let offsetX = this.isLeftRow(row) ? 32 : 64;
 
-    // let newEgg = new Egg(this.scene);
-    // newEgg.setColor(bullet.getColor());
+    let newEgg = new Egg({
+      scene: this.scene,
+      color: bullet.getColor(), 
+      x: offsetX + col*64,
+      y: 32 + hOffset*row
+    })
 
-    // if(row % 2 == 0) {
-    //   newEgg.setPosition(evenPos + col*64 + 44, row*hOffset + 34);
-    // } else {
-    //   newEgg.setPosition(oddPos + col*64 + 44, row*hOffset + 34);
-    // }
-    // this.gameMap[row][col] = newEgg;
-    // this.add(newEgg);
-    // this.check.push(Array(this.gameMap.length).fill(null).map( (): number => {
-    //   return 1;
-    // }))
+    this.add(newEgg);
+    this.eggsGroup.add(newEgg);
+    this.eggsMap[row][col] = newEgg;
+
+    this.scene.time.addEvent({
+      delay: 100, 
+      callback: () => {
+        console.log(123);
+        this.checkEggsChain(row, col)
+      }
+    });
 
   }
 
-  private findCluster(x: number, y: number) {
+  private checkEggsChain(row: number, col: number): void {
+    let eggsChain = this.findEggsChain(row, col);
+    if (eggsChain.length >= 3) {
+      eggsChain.forEach((ele) => {
+        this.eggsMap[ele[0]][ele[1]].destroy();
+        this.eggsMap[ele[0]][ele[1]] = null;
+      });
+    }
 
+    let allEggNotRelatedWithRoot = this.findAllEggsNotRelatedWithRoot();
+    allEggNotRelatedWithRoot.forEach((ele) => {
+      this.eggsMap[ele[0]][ele[1]].destroy();
+      this.eggsMap[ele[0]][ele[1]] = null;
+    });
   }
+
+
 }
 
