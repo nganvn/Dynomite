@@ -8,7 +8,6 @@ import { Trajectory } from './Trajectory';
 export class Gun extends GameObjects.Container {
   private bullet: Bullet;
   private trajectory: Trajectory;
-  private currentColors: EggColor[];
 
   constructor(params: IGun) {
     super(params.scene, params.x, params.y);
@@ -16,17 +15,18 @@ export class Gun extends GameObjects.Container {
     this.init();
 
     this.scene.add.existing(this);
-
-    // input
-
   }
 
   private init() {
     this.trajectory = new Trajectory(this.scene);
+
+    this.setPosition(this.scene.cameras.main.width / 2, this.scene.cameras.main.height - 68)
+
     this.add(this.trajectory);
   }
 
   public loadBullet(bullet: Bullet): void {
+    bullet.setPosition(this.scene.cameras.main.width / 2, this.scene.cameras.main.height - 68);
     this.bullet = bullet;
     
   }
@@ -36,7 +36,10 @@ export class Gun extends GameObjects.Container {
       Phaser.Math.Distance.Between(this.x, this.y, x, y),
       Phaser.Math.Angle.Between(x, y, this.x, this.y) - Math.PI / 2
     );
-    // this.
+  }
+
+  public hideTrajectory(): void {
+    this.trajectory.setVisible(false);
   }
 
   public shot(): Bullet {
@@ -49,9 +52,10 @@ export class Gun extends GameObjects.Container {
     let vx = speed * Math.cos(angle - Math.PI / 2);
     let vy = speed * Math.sin(angle - Math.PI / 2);
 
-    this.bullet.setVelocity(vx, vy);
     let bulletRet = this.bullet;
     this.bullet = null;
+
+    bulletRet.setVelocity(vx, vy);
     return bulletRet;
   }
 

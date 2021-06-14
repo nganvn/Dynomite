@@ -9,20 +9,13 @@ export class Bullet extends Egg {
     super(params);
     
     this.setBounce(1,1)
-      .setCollideWorldBounds(true)
-      .setDepth(10);
-      
+      .setCollideWorldBounds(true);
+
     this.scene.add.existing(this);
   }
 
   public update(): void {
 
   }
-
-  // public toEgg(): Egg {
-  //   let egg = new Egg(this.scene);
-  //   this.setTexture(getEggStringColor(this.getColor()));
-  //   return Egg
-  // }
 
 }

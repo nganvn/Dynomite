@@ -24,7 +24,6 @@ export class Egg extends Physics.Arcade.Sprite {
     //physics
     this.scene.physics.world.enable(this);
     this.body.setCircle(this.width / 2);
-    this.setBounce(1, 1)
     this.setVelocity(0);  
     this.setImmovable(true);
   }
